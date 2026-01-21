@@ -44,6 +44,13 @@ expectations:
         High: 0.098
       psi_threshold: 0.25
 
+  # Column type change detection
+  - column: Delivery_person_Age
+    expectation: ExpectColumnValuesToBeOfType
+    values:
+      type_: float64
+      mostly: 0.99
+
 reporting:
   format: json
   output_dir: outputs
