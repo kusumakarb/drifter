@@ -33,7 +33,21 @@ A production-ready Python framework for detecting data drift using **Great Expec
 - Python 3.12+
 - `uv` package manager (recommended) or `pip`
 
-### Install Dependencies
+### Step 1: Create Virtual Environment
+
+```bash
+# Create a virtual environment
+python -m venv venv
+
+# Activate the virtual environment
+# On Linux/Mac:
+source venv/bin/activate
+
+# On Windows:
+venv\Scripts\activate
+```
+
+### Step 2: Install Dependencies
 
 ```bash
 # Using uv (recommended)
