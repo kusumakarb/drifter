@@ -10,14 +10,18 @@ A production-ready Python framework for detecting data drift using **Great Expec
 ## Table of Contents
 
 1. [Features](#features)
-2. [Architecture](#architecture)
-3. [Installation](#installation)
-4. [Quick Start](#quick-start)
+2. [Installation](#installation)
+3. [Quick Start](#quick-start)
+4. [Architecture](#architecture)
 5. [Drift Detection Types](#drift-detection-types)
-6. [Configuration](#configuration)
-7. [Usage Examples](#usage-examples)
-8. [Design Decisions](#design-decisions)
-9. [Project Structure](#project-structure)
+6. [Statistical Methods & Justification](#statistical-methods--justification)
+7. [Configuration](#configuration)
+8. [Usage Examples](#usage-examples)
+9. [Design Decisions](#design-decisions)
+10. [Extending the Framework](#extending-the-framework)
+11. [Sample Data](#sample-data)
+12. [Test Cases](#test-cases)
+13. [Project Structure](#project-structure)
 
 ---
 
@@ -26,65 +30,10 @@ A production-ready Python framework for detecting data drift using **Great Expec
 ✅ **Built on Great Expectations 1.x**: Leverages GX's class-based API and validation engine
 ✅ **Custom Expectations**: GPS precision and categorical distribution drift detection
 ✅ **Persistent State Management**: GX file context stores suites and validation results
-✅ **Data Docs Integration**: Automatic HTML report generation via GX
+✅ **Data Docs Integration**: Automatic HTML report generation with GX
 ✅ **Validation History**: Complete audit trail stored by GX validation results store
 ✅ **Production-Ready**: Type-safe, well-tested, comprehensive error handling
 ✅ **Extensible**: Add custom expectations following GX 1.x patterns
-
----
-
-## Architecture
-
-### High-Level Design
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      DriftWatch CLI                         │
-├─────────────────────────────────────────────────────────────┤
-│  profile command                evaluate command            │
-│  └─> Build GX Suite        └─> Validate against Suite      │
-└─────────────────────────────────────────────────────────────┘
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    Core Components                          │
-├─────────────────────────────────────────────────────────────┤
-│  • DriftWatchConfig (YAML configuration loader)             │
-│  • DriftWatchGXContext (persistent GX context manager)      │
-│  • ExpectationSuiteBuilder (builds GX suites from data)     │
-│  • ValidationResultEnricher (adds DriftWatch metadata)      │
-└─────────────────────────────────────────────────────────────┘
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│              Great Expectations 1.x Layer                   │
-├─────────────────────────────────────────────────────────────┤
-│  Built-in Expectations:                                     │
-│  • ExpectColumnToExist (schema validation)                  │
-│  • ExpectColumnMeanToBeBetween (statistical checks)         │
-│  • ExpectColumnStdevToBeBetween                             │
-│  • ExpectColumnMinToBeBetween                               │
-│  • ExpectColumnMaxToBeBetween                               │
-│                                                             │
-│  Custom Expectations (GX 1.x class-based):                  │
-│  • ExpectColumnValuesToHaveDecimalPrecision (GPS)           │
-│  • ExpectColumnCategoriesToMatchDistribution (PSI)          │
-└─────────────────────────────────────────────────────────────┘
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│                  GX Outputs                                 │
-├─────────────────────────────────────────────────────────────┤
-│  • Expectation Suites (gx/expectations/)                    │
-│  • Validation Results (gx/uncommitted/validations/)         │
-│  • Data Docs (gx/uncommitted/data_docs/local_site/)         │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Key Design Patterns
-
-1. **Great Expectations 1.x Class-Based API**: All expectations instantiated as classes
-2. **Expectation Suite Builder**: Builds GX suites from reference data + config
-3. **Persistent GX Context**: File-based context in `gx/` directory
-4. **Validation Results Store**: GX automatically stores validation history
-5. **Custom Expectations**: Follow GX 1.x `ColumnAggregateExpectation` pattern
 
 ---
 
@@ -207,97 +156,331 @@ ls -t gx/uncommitted/validations/ | head -1
 
 ---
 
+## Architecture
+
+### High-Level Design
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      DriftWatch CLI                         │
+├─────────────────────────────────────────────────────────────┤
+│  profile command                evaluate command            │
+│  └─> Build GX Suite        └─> Validate against Suite      │
+└─────────────────────────────────────────────────────────────┘
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Core Components                          │
+├─────────────────────────────────────────────────────────────┤
+│  • DriftWatchConfig (YAML configuration loader)             │
+│  • DriftWatchGXContext (persistent GX context manager)      │
+│  • ExpectationSuiteBuilder (builds GX suites from data)     │
+│  • ValidationResultEnricher (adds DriftWatch metadata)      │
+└─────────────────────────────────────────────────────────────┘
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│              Great Expectations 1.x Layer                   │
+├─────────────────────────────────────────────────────────────┤
+│  Built-in Expectations:                                     │
+│  • ExpectColumnToExist (schema validation)                  │
+│  • ExpectColumnMeanToBeBetween (statistical checks)         │
+│  • ExpectColumnStdevToBeBetween                             │
+│  • ExpectColumnMinToBeBetween                               │
+│  • ExpectColumnMaxToBeBetween                               │
+│                                                             │
+│  Custom Expectations (GX 1.x class-based):                  │
+│  • ExpectColumnValuesToHaveDecimalPrecision (GPS)           │
+│  • ExpectColumnCategoriesToMatchDistribution (PSI)          │
+└─────────────────────────────────────────────────────────────┘
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  GX Outputs                                 │
+├─────────────────────────────────────────────────────────────┤
+│  • Expectation Suites (gx/expectations/)                    │
+│  • Validation Results (gx/uncommitted/validations/)         │
+│  • Data Docs (gx/uncommitted/data_docs/local_site/)         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Key Design Patterns
+
+1. **Great Expectations 1.x Class-Based API**: All expectations instantiated as classes
+2. **Expectation Suite Builder**: Builds GX suites from reference data + config
+3. **Persistent GX Context**: File-based context in `gx/` directory
+4. **Validation Results Store**: GX automatically stores validation history
+5. **Custom Expectations**: Follow GX 1.x `ColumnAggregateExpectation` pattern
+
+---
+
 ## Drift Detection Types
 
 ### 1. Schema Drift (ALWAYS ENABLED)
 
-**Detects:**
-- ✅ Column removal (CRITICAL)
-- ✅ Column addition (MAJOR)
-- ✅ Data type changes (CRITICAL)
+**What We Want to Detect:**
 
-**Implementation:**
-- Uses GX built-in `ExpectColumnToExist` for all columns
+The structure of the data changed - columns disappeared, new columns appeared, or data types changed.
 
-**Example:**
-```yaml
-# Schema drift is always enabled via ExpectationSuiteBuilder
-# No configuration needed
+**Example Problem:**
 ```
+Reference data has: restaurant_id, latitude, longitude, delivery_time
+New data arrives with: restaurant_id, lat, long, delivery_time
+
+Problem: Column names changed! (latitude → lat, longitude → long)
+Your code doing data["latitude"] will crash.
+```
+
+**Why This Matters:**
+- **Column removed**: Code will crash trying to access missing column
+- **Column added**: Might indicate new data source or schema version
+- **Type changed**: Integer → String breaks calculations silently
+
+---
+
+**Detection Method: Direct Comparison**
+
+No statistics needed - we just check:
+1. Are all expected columns present?
+2. Do column data types match?
+
+**Why This Works:**
+- Schema changes are binary: column exists or it doesn't
+- No ambiguity - no need for thresholds or statistical tests
+- Immediate detection - fails on first row if column missing
+
+**Always Enabled:**
+This check runs automatically for all columns. No configuration needed - if reference data has 20 columns, we expect new data to have the same 20 columns with same types.
 
 ---
 
 ### 2. Numerical Statistical Drift
 
-**Detects:**
-- ✅ Mean shifts (outside reference ± 2 standard deviations)
-- ✅ Standard deviation changes (outside 50%-200% of reference)
-- ✅ Min/Max value changes
+**What We Want to Detect:**
 
-**Implementation:**
-- Uses GX built-in expectations:
-  - `ExpectColumnMeanToBeBetween`
-  - `ExpectColumnStdevToBeBetween`
-  - `ExpectColumnMinToBeBetween`
-  - `ExpectColumnMaxToBeBetween`
+For numerical columns, we want to catch two different problems:
+
+**Problem A: Overall quality changed**
+```
+Delivery Ratings (Reference): Average = 4.63 (mostly 4.5-5.0 stars)
+New data: Average = 2.1 (mostly 1.5-2.5 stars)
+
+Problem: Most ratings are now terrible!
+Impact: Service quality collapsed, customer satisfaction dropped
+```
+
+**Problem B: Consistency changed**
+```
+Delivery Time (Reference): Average = 26 min, ranges 16-36 min (predictable)
+New data: Average = 26 min, but ranges 5-60 min (wild swings!)
+
+Problem: Delivery times became unpredictable!
+Impact: Can't give customers reliable ETAs
+```
+
+---
+
+**Available Methods:**
+
+1. **Mean (Average)**: Detects if values shifted higher or lower
+   - Good for: "Did quality go down?" or "Did prices increase?"
+   - Example: Average rating dropped from 4.6 → 2.1
+
+2. **Standard Deviation (Spread)**: Detects if values became more scattered
+   - Good for: "Did consistency change?" or "More outliers appearing?"
+   - Example: Delivery times now vary wildly (std dev: 9.75 → 18 min)
+
+3. **Min/Max (Range)**: Detects new extreme values
+   - Good for: "Did impossible values appear?"
+   - Example: Delivery time = -5 minutes (impossible!)
+
+4. **Percentiles (Median, 95th%)**: Like mean but less sensitive to outliers
+   - Good for: Similar to mean, but ignores extreme values
+   - Problem: Great Expectations doesn't have built-in percentile checks
+
+---
+
+**Methods Used:**
+
+**A. Mean - For Quality Monitoring**
+
+**Column:** `Delivery_person_Ratings`
+**Current State:** Mean = 4.63/5.0 (excellent quality)
+**Threshold:** Min = 3.5, Max = 5.0
+
+**Why Mean (not Median or Std Dev)?**
+- **Mean answers**: "What's the overall quality?"
+- If most ratings shift to < 2.0, mean will drop to ~1.8 (catches the problem)
+- **Std dev wouldn't work**: Std dev only measures spread, not whether ratings are LOW
+  - All ratings could be consistently terrible (mean=2.0, low std dev) ✅ Passes std dev check ❌ But quality is awful!
+
+**Is 3.5 the right threshold?**
+- Somewhat arbitrary - we chose it based on: mean < 3.5 means most ratings are below "acceptable"
+- Alternative: Could use 4.0 (stricter) or 3.0 (more lenient)
+- **Critical thinking**: This threshold assumes ratings are normally distributed, which may not be true
+
+---
+
+**B. Standard Deviation - For Consistency Monitoring**
+
+**Column:** `Time_taken(min)`
+**Current State:** Mean = 26.14 min, Std Dev = 9.75 min
+**Threshold:** Min = 8.5, Max = 11.5
+
+**Why Std Dev (not Mean)?**
+- **Std dev answers**: "How predictable are delivery times?"
+- Low std dev (< 8.5) = Too consistent (might indicate data filtering)
+- High std dev (> 11.5) = Unpredictable (operational problems)
+
+**What Std Dev Values Mean:**
+- Std dev = 9.75 (current): Most deliveries 16-36 min (moderate variation)
+- Std dev = 7.0 (low): Most deliveries 19-33 min (very consistent)
+- Std dev = 15.0 (high): Deliveries range 5-60 min (wildly inconsistent)
+
+**Is Std Dev the best choice?**
+- **Limitation**: Std dev can be misleading if distribution is skewed
+  - Example: 90% of deliveries are 25 min, 10% are 90 min → high std dev, but most customers experience consistency
+- **Alternative**: Could use Interquartile Range (IQR) - measures spread without being affected by extreme outliers
+  - But GX doesn't have built-in IQR expectations
+
+---
+
+**Why Not Use All Statistics?**
+
+We ONLY monitor mean and std dev for specific columns, not all numerical columns. Why?
+
+- **Avoiding Alert Fatigue**: If we check mean/std/min/max for every column, we'd get 80+ alerts
+- **Business Priority**: We care about ratings quality and delivery consistency, not every single number
+- **Simpler = Better**: Easier to understand "ratings dropped below 3.5" than tracking 20 different metrics
 
 **Configuration:**
 ```yaml
-column_groups:
-  numerical:
-    - Delivery_person_Ratings
-    - Time_taken(min)
+expectations:
+  # Ratings quality - detect if most ratings drop to poor range
+  - column: Delivery_person_Ratings
+    expectation: ExpectColumnMeanToBeBetween
+    values:
+      min_value: 3.5  # Most ratings still acceptable
+      max_value: 5.0
 
-detectors:
-  numerical_stats:
-    enabled: true
-    apply_to_groups:
-      - numerical
+  # Delivery time consistency - detect unpredictable service
+  - column: Time_taken(min)
+    expectation: ExpectColumnStdevToBeBetween
+    values:
+      min_value: 8.5   # Not too consistent (might be filtered data)
+      max_value: 11.5  # Not too chaotic (operational issues)
 ```
 
 ---
 
 ### 3. GPS Precision Drift (Custom Expectation)
 
-**Detects:**
-- ✅ GPS coordinate precision loss (6 decimals → 2 decimals)
-- ✅ Indicates data pipeline truncation/rounding issues
+**What We Want to Detect:**
 
-**Implementation:**
-- Custom GX 1.x expectation: `ExpectColumnValuesToHaveDecimalPrecision`
-- Calculates decimal places for each value
-- Uses PSI-based metric for validation
+GPS coordinates lost precision due to data pipeline bugs.
 
-**Configuration:**
-```yaml
-column_groups:
-  gps_coordinates:
-    - Restaurant_latitude
-    - Restaurant_longitude
-    - Delivery_location_latitude
-    - Delivery_location_longitude
+**Example Problem:**
+```
+Reference data:
+  Restaurant_latitude: 12.934523  (6 decimal places = ~10 cm accuracy)
 
-detectors:
-  gps_precision:
-    enabled: true
-    apply_to_groups:
-      - gps_coordinates
-    thresholds:
-      precision_required: 6
-      mostly: 0.999  # 99.9% of values must meet precision
+New data arrives:
+  Restaurant_latitude: 12.93      (2 decimal places = ~1 km accuracy!)
+
+Problem: Coordinates were truncated somewhere in the pipeline!
+Impact: Delivery routing breaks, distances calculated incorrectly
 ```
 
 **Why This Matters:**
-- 6 decimals = ~10cm accuracy (required for delivery routing)
-- 2 decimals = ~1km accuracy (unusable for route optimization)
-- Silent data corruption (loads successfully but is wrong)
+
+GPS decimal places directly determine accuracy:
+- **6 decimals** (12.934523) = ~11 cm precision → Can identify specific building entrance
+- **5 decimals** (12.93452) = ~1.1 meters → Building-level accuracy
+- **4 decimals** (12.9345) = ~11 meters → Street-level
+- **2 decimals** (12.93) = ~1.1 kilometers → City neighborhood level
+
+**Business Impact:**
+- Route optimization needs < 10 meter accuracy
+- Distance-based pricing becomes wrong (could charge based on wrong distance)
+- "Closest restaurant" search returns incorrect results
+
+---
+
+**Available Methods:**
+
+1. **Count Decimal Places**: Simply count digits after decimal point
+   - Check if value is "12.934523" (6 decimals) vs "12.93" (2 decimals)
+   - Direct and simple
+
+2. **Check Variance**: Truncated coordinates cluster on grid points, reducing variance
+   - Example: 12.93, 12.93, 12.93 (low variance) vs 12.934523, 12.934891, 12.935102 (normal variance)
+   - Problem: Variance can drop for legitimate reasons (e.g., all restaurants in same area)
+
+3. **Range Check**: Truncated values have smaller range
+   - Problem: Similar to variance - legitimate data could have small range
+
+---
+
+**Method Used: Count Decimal Places**
+
+**Why Decimal Counting:**
+- **Direct detection**: Catches exact failure mode (truncation)
+- **No ambiguity**: Either has 6 decimals or it doesn't
+- **Clear signal**: Variance/range can drop for many reasons, but decimal places only drop due to truncation
+
+**How It Works:**
+- Convert number to string: `12.934523` → "12.934523"
+- Count characters after decimal point: 6
+- Alert if most values have < 6 decimals
+
+**Threshold: 95% of values must have 6 decimals**
+
+**Why 95% (not 100%)?**
+- Allows for some null values or data quality issues
+- If 95% have 2 decimals, that's clearly a pipeline issue (not random noise)
+
+**Is This the Best Method?**
+
+**Pros:**
+- ✅ Simple and direct
+- ✅ Catches exact problem we care about (truncation)
+- ✅ No false positives from legitimate data patterns
+
+**Cons:**
+- ❌ Doesn't catch OTHER GPS problems:
+  - Coordinates completely wrong (wrong restaurant)
+  - Coordinates swapped (latitude ↔ longitude)
+  - Coordinates outside valid range (latitude > 90°)
+
+**Alternative Approach:**
+For complete GPS validation, could also check:
+- Are coordinates within valid ranges? (lat: -90 to 90, lon: -180 to 180)
+- Are coordinates in expected geographic region? (e.g., all India locations should be in India)
+- But these are different problems - we're specifically monitoring for precision loss
+
+**Single Column Check:**
+
+We only check `Restaurant_latitude`, not all 4 GPS columns (restaurant lat/lon, delivery lat/lon).
+
+**Why?**
+- If there's a pipeline bug (database type change, CSV export issue), it affects ALL GPS columns uniformly
+- Checking one column is sufficient to detect systematic precision loss
+- Reduces alert fatigue (4 alerts → 1 alert for same issue)
+
+**Configuration:**
+```yaml
+expectations:
+  # GPS precision check (detects truncation/rounding bugs)
+  - column: Restaurant_latitude
+    expectation: ExpectColumnValuesToHaveDecimalPrecision
+    values:
+      precision: 6      # Require 6 decimal places
+      mostly: 0.95      # 95% of values must meet this
+```
 
 ---
 
 ### 4. Categorical Distribution Drift (Custom Expectation)
 
 **Detects:**
-- ✅ Distribution shifts via Population Stability Index (PSI)
+- ✅ Distribution shifts using Population Stability Index (PSI)
 - ✅ Category disappearance (Medium: 24% → 0%)
 - ✅ Category explosions (Jam: 31% → 90%)
 
@@ -310,20 +493,30 @@ detectors:
   - 0.2 ≤ PSI < 0.25: Major drift
   - PSI ≥ 0.25: **Critical drift**
 
-**Configuration:**
+**Current Configuration:**
 ```yaml
-column_groups:
-  traffic_conditions:
-    - Road_traffic_density
+expectations:
+  # Categorical value set expectation
+  - column: Type_of_order
+    expectation: ExpectColumnValuesToBeInSet
+    values:
+      value_set: ["Snack", "Meal", "Drinks", "Buffet"]
 
-detectors:
-  categorical_distribution:
-    enabled: true
-    apply_to_groups:
-      - traffic_conditions
-    thresholds:
+  # Categorical distribution expectation
+  - column: Road_traffic_density
+    expectation: ExpectColumnCategoriesToMatchDistribution
+    values:
+      reference_distribution:
+        Jam: 0.314
+        Low: 0.344
+        Medium: 0.243
+        High: 0.098
       psi_threshold: 0.25
 ```
+
+**Why These Columns:**
+- **Type_of_order**: Validates category values remain in expected set
+- **Road_traffic_density**: Monitors traffic pattern distribution shifts (PSI-based)
 
 **Why This Matters (Text2SQL Context):**
 - Queries like `WHERE traffic = 'Medium'` return 0 rows (unexpected)
@@ -333,48 +526,333 @@ detectors:
 
 ---
 
+## Statistical Methods & Justification
+
+### Overview of Implemented Drift Types
+
+DriftWatch implements **4 types of drift detection** as required by the case study:
+
+1. **Schema Drift** (Column Addition/Removal, Type Changes)
+2. **Numerical Statistical Drift** (Mean, Std Dev shifts)
+3. **GPS Precision Drift** (Numerical Distribution - Custom)
+4. **Categorical Distribution Drift** (PSI-based - Custom)
+
+### 1. Schema Drift Detection
+
+**Implementation:**
+- Uses GX built-in `ExpectColumnToExist` for all columns
+- Type checking using pandas dtype comparison
+
+**Justification:**
+- **No statistical test needed** - Schema changes are binary (column exists or not)
+- Column removal = CRITICAL (breaks downstream queries)
+- Column addition = MAJOR (indicates schema evolution)
+- Type changes = CRITICAL (breaks type-dependent operations)
+
+**Why This Approach:**
+- Direct column set comparison is deterministic and reliable
+- No false positives - either the column exists or it doesn't
+- Type comparison catches silent data corruption (int → string)
+
+---
+
+### 2. Numerical Statistical Drift
+
+**Statistical Tests Used:**
+1. **Mean Test**: Detects distribution shifts (e.g., most ratings drop to < 2.0)
+2. **Standard Deviation Test**: Detects consistency changes (e.g., delivery times become unpredictable)
+
+**Justification:**
+
+**A. Delivery Ratings - Mean Test:**
+
+**Column:** `Delivery_person_Ratings`
+**Metric:** `ExpectColumnMeanToBeBetween(min_value: 3.5, max_value: 5.0)`
+
+**Current State:**
+- Mean: 4.63 / 5.0 (excellent quality)
+- 75% of ratings ≥ 4.5
+- Only 0.09% of ratings < 2.0
+
+**What It Detects:**
+- **Distribution shift toward low ratings**: If most ratings drop to < 2.0, mean would drop to ~1.9
+- **Threshold at 3.5**: Indicates majority of ratings have shifted to poor quality range
+
+**Why Mean (not Median or Std Dev)?**
+- **Median**: Great Expectations doesn't have built-in median expectation (would require custom implementation)
+- **Std Dev**: Measures consistency, NOT absolute quality level (all ratings could be consistently terrible with low std dev!)
+- **Mean**: Direct measure of overall quality, built-in support, stakeholder-friendly
+
+**Business Impact:**
+- Mean < 3.5 = Service quality crisis, immediate investigation required
+- Catches systemic quality degradation, not just isolated incidents
+
+---
+
+**B. Delivery Time - Standard Deviation Test:**
+
+**Column:** `Time_taken(min)`
+**Metric:** `ExpectColumnStdevToBeBetween(min_value: 8.5, max_value: 11.5)`
+
+**Current State:**
+- Mean: 26.14 minutes
+- Std Dev: 9.75 minutes
+- Range: 10-54 minutes (moderate spread)
+
+**What It Detects:**
+- **Std Dev < 8.5 (too consistent)**:
+  - Possible data filtering/sampling bias
+  - Geographic restriction (only urban deliveries)
+  - Missing data for slow deliveries
+- **Std Dev > 11.5 (too inconsistent)**:
+  - Unpredictable delivery times
+  - Operational problems (staffing, routing failures)
+  - Service area expansion without adjustment
+
+**Why Std Dev (not Mean)?**
+- **Mean**: Measures average speed, not consistency
+- **Std Dev**: Measures predictability - critical for customer satisfaction
+- **Business Impact**: Customers care about consistency as much as speed
+
+**Threshold Justification:**
+- 8.5 = ~87% of reference std dev (allows efficiency improvements)
+- 11.5 = ~118% of reference std dev (flags unpredictability)
+- Based on reference data analysis (std dev: 9.75)
+
+---
+
+**Alternative Considered:**
+- **Kolmogorov-Smirnov (KS) Test**: Rejected because:
+  - Too sensitive for large datasets (always significant with N > 10k)
+  - Requires choosing arbitrary p-value threshold
+  - Doesn't provide actionable thresholds (what does p=0.03 mean for operations?)
+  - Mean/Std tests directly answer: "How much did quality/consistency change?"
+
+---
+
+### 3. GPS Precision Drift (Custom Expectation)
+
+**Statistical Test:**
+- **Custom Metric**: Decimal place counting using string analysis
+- **Threshold**: Precision must be ≥ 6 decimal places for 99.9% of values
+
+**Justification:**
+
+**Why Decimal Place Counting?**
+- **Direct Detection**: Precision loss is deterministic (6 decimals → 2 decimals)
+- **No Statistical Test Needed**: Precision is a property of the data representation, not distribution
+- **High Specificity**: Catches exact failure mode (database truncation, type conversion)
+- **Implementation**: String analysis to count decimal places
+
+**Why 6 Decimal Places?**
+- **Geographic Precision**:
+  - 6 decimals = ~0.11 meters (street address accuracy)
+  - 5 decimals = ~1.1 meters (building-level accuracy)
+  - 2 decimals = ~1.1 kilometers (city-level only)
+- **Business Requirements**:
+  - Delivery routing needs street-level precision (< 10 meters)
+  - Distance-based pricing breaks with kilometer-level precision
+  - Route optimization requires accurate coordinates between restaurant and delivery location
+
+**Why 95% Threshold (`mostly=0.95`)?**
+- Allows for some null values or data quality issues
+- Still catches systematic precision loss affecting majority of column
+- Balances detection sensitivity with real-world data quality
+
+**Alternative Considered:**
+- **Variance Test**: Rejected because:
+  - Truncated values cluster on grid points → variance drops
+  - But variance drop could be caused by other factors (legitimate data change)
+  - Decimal counting is more direct and interpretable
+
+**Real-World Example:**
+- PostgreSQL: `DECIMAL(10,6)` → `DECIMAL(4,2)` migration bug
+- CSV export: Excel auto-formatting removes trailing decimals
+- API change: New vendor returns 2 decimals instead of 6
+
+---
+
+### 4. Categorical Distribution Drift (Custom Expectation)
+
+**What We Want to Detect:**
+
+We need to catch when the **proportions of categories change** in our data. For example:
+
+```
+Road Traffic Density (Reference data):
+  Low: 34%    Medium: 24%    High: 10%    Jam: 31%
+
+New data arrives with very different proportions:
+  Low: 10%    Medium: 0%     High: 0%     Jam: 90%
+
+Problem: "Medium" traffic disappeared! Queries like WHERE traffic='Medium'
+will return 0 rows unexpectedly.
+```
+
+**Why This Matters:**
+- LLMs generate queries assuming old category distributions
+- Models trained on "Medium=24%" now see "Medium=0%"
+- Business logic breaks (e.g., "send alert if Medium traffic > 30%")
+
+---
+
+**Available Methods:**
+
+1. **Chi-Square Test**: Statistical test that checks "are these distributions different?"
+   - Problem: With 45k+ rows, it ALWAYS says "yes, they're different" (too sensitive)
+   - Gives p-value (0.001) but not "how different" or "how bad is it?"
+
+2. **Simple Percentage Difference**: Compare each category (|new% - old%|)
+   - Example: Medium went from 24% → 0%, difference = 24%
+   - Problem: How do we combine differences across all categories into one decision?
+
+3. **Population Stability Index (PSI)**: Combines all category changes into single number
+   - Formula: For each category, calculate: `(new% - old%) × ln(new% / old%)`
+   - Sum across all categories to get one drift score
+   - PSI = 0.1 means "small shift", PSI = 0.5 means "huge shift"
+
+---
+
+**Method Used: PSI**
+
+**Why PSI:**
+- **Single number**: PSI = 0.3 immediately tells you severity (vs tracking 4 separate percentages)
+- **Handles disappearing categories**: When Medium drops to 0%, PSI captures this correctly
+- **Balanced**: Treats "category growing" and "category shrinking" equally important
+
+**Limitations of PSI:**
+- **Arbitrary threshold**: Why is 0.25 "critical"? This is somewhat arbitrary (borrowed from credit scoring)
+- **Hard to interpret**: What does PSI = 0.3 actually mean? Not as intuitive as "Medium traffic dropped 24%"
+- **Overkill for simple cases**: If you only care about ONE category disappearing, checking `Medium% > 5%` is simpler
+
+**Is PSI the best choice?**
+
+For our use case (monitoring 4-5 categories, need automated alerts), PSI works well because:
+- ✅ Automates the decision: PSI > 0.25 → alert (vs manually checking 4 percentages)
+- ✅ Handles multiple simultaneous changes (e.g., Medium↓ AND Jam↑)
+
+But for simpler monitoring, you could just track:
+- "Are any categories below 5%?" (catches disappearing categories)
+- "Did any category change by more than 20%?" (catches big shifts)
+
+**PSI Thresholds Used:**
+
+| PSI Value | What It Means | Action |
+|-----------|---------------|--------|
+| < 0.1 | Categories shifted < 10% on average | Monitor |
+| 0.1 - 0.2 | Moderate shifts | Investigate |
+| 0.2 - 0.25 | Large shifts | Review data pipeline |
+| ≥ 0.25 | Categories drastically changed | **Stop processing** |
+
+**Real Example from Our Data:**
+
+```
+Traffic Density Drift:
+  Reference:    Low=34%, Medium=24%, High=10%, Jam=31%
+  New Dataset:  Low=10%, Medium=0%,  High=0%,  Jam=90%
+
+  Changes:
+    - "Jam" exploded: 31% → 90% (+59%)
+    - "Medium" and "High" disappeared completely
+    - "Low" dropped significantly
+
+  PSI Calculation: 3.43 (very high!)
+  Verdict: CRITICAL - distribution has fundamentally changed
+```
+
+**What This Drift Means:**
+- Traffic patterns completely different (mostly jammed now)
+- Models trained on old data will perform poorly
+- Business rules may not apply (e.g., "avoid High traffic routes")
+
+---
+
+### Summary Table
+
+| Drift Type | Column | Statistical Method | Threshold | What It Detects |
+|------------|--------|-------------------|-----------|-----------------|
+| Schema | All columns | Deterministic set comparison | N/A | Column addition/removal |
+| Numerical (Mean) | Delivery_person_Ratings | Mean | 3.5 - 5.0 | Distribution shift to low ratings |
+| Numerical (Std Dev) | Time_taken(min) | Std Dev | 8.5 - 11.5 min | Delivery time consistency changes |
+| GPS Precision | Restaurant_latitude | Decimal place counting | ≥6 decimals, 95% | GPS truncation/rounding bugs |
+| Categorical (Value Set) | Type_of_order | Set membership | Fixed set | New/removed order types |
+| Categorical (PSI) | Road_traffic_density | Population Stability Index | PSI < 0.25 | Traffic pattern distribution shifts |
+
+**Key Design Principles:**
+- **Column selection**: Business-critical metrics with clear interpretation
+- **Mean for quality**: Detects distribution shifts (e.g., most ratings drop to < 2.0)
+- **Std Dev for consistency**: Detects variability changes (e.g., unpredictable delivery times)
+- **Representative GPS check**: Single column sufficient (pipeline issues affect all GPS columns)
+- **Actionable thresholds**: Direct business meaning (mean < 3.5 = quality crisis)
+
+---
+
 ## Configuration
 
-### Full Configuration Example
+### Configuration File: `driftwatch_config.yaml`
 
-See `driftwatch_config.yaml` for complete example:
+DriftWatch uses a simplified YAML configuration with direct column-level expectations:
 
 ```yaml
-# Define semantic column groups
-column_groups:
-  gps_coordinates:
-    - Restaurant_latitude
-    - Restaurant_longitude
-    - Delivery_location_latitude
-    - Delivery_location_longitude
-  numerical:
-    - Delivery_person_Ratings
-    - Time_taken(min)
-  categorical:
-    - Road_traffic_density
+# DriftWatch Configuration - Simplified
 
-# Configure detectors
-detectors:
-  numerical_stats:
-    enabled: true
-    apply_to_groups:
-      - numerical
+# Schema check (automated from reference data)
+schema:
+  enabled: true
 
-  gps_precision:
-    enabled: true
-    apply_to_groups:
-      - gps_coordinates
-    thresholds:
-      precision_required: 6
-      mostly: 0.999
+# Column-level expectations (user-provided values)
+expectations:
+  # Statistical expectation for delivery time consistency
+  - column: Time_taken(min)
+    expectation: ExpectColumnStdevToBeBetween
+    values:
+      min_value: 8.5
+      max_value: 11.5
 
-  categorical_distribution:
-    enabled: true
-    apply_to_groups:
-      - categorical
-    thresholds:
+  # Delivery ratings quality - detect distribution shift to low ratings
+  - column: Delivery_person_Ratings
+    expectation: ExpectColumnMeanToBeBetween
+    values:
+      min_value: 3.5
+      max_value: 5.0
+
+  # GPS precision expectation (representative check)
+  - column: Restaurant_latitude
+    expectation: ExpectColumnValuesToHaveDecimalPrecision
+    values:
+      precision: 6
+      mostly: 0.95
+
+  # Categorical value set expectation
+  - column: Type_of_order
+    expectation: ExpectColumnValuesToBeInSet
+    values:
+      value_set: ["Snack", "Meal", "Drinks", "Buffet"]
+
+  # Categorical distribution expectation
+  - column: Road_traffic_density
+    expectation: ExpectColumnCategoriesToMatchDistribution
+    values:
+      reference_distribution:
+        Jam: 0.314
+        Low: 0.344
+        Medium: 0.243
+        High: 0.098
       psi_threshold: 0.25
+
+reporting:
+  format: json
+  output_dir: outputs
+
+logging:
+  level: INFO
 ```
+
+**Key Features:**
+- **Schema drift**: Always enabled (automated)
+- **Direct expectations**: Specify exactly which columns and thresholds to monitor
+- **Minimal configuration**: Only 5 expectations covering 4 drift types
+- **Representative checks**: Single GPS column (applies to all if pipeline issue)
 
 ---
 
@@ -429,7 +907,7 @@ open gx/uncommitted/data_docs/local_site/index.html
 2. **Built-in Validation Engine**: Battle-tested, production-grade
 3. **Persistent State**: File-based context stores suites and results
 4. **Data Docs**: Automatic HTML report generation
-5. **Extensibility**: Custom expectations via well-defined patterns
+5. **Extensibility**: Custom expectations using well-defined patterns
 6. **Validation Results Store**: Built-in audit trail
 
 ### Why Custom Expectations?
@@ -501,14 +979,14 @@ gx/                                     # GX state directory (persistent)
 ```bash
 # 1. Profile reference
 python -m driftwatch.cli profile \
-    --reference food_delivery.csv \
+    --reference data/reference/reference_data.csv \
     --config driftwatch_config.yaml
 
-# 2. Evaluate same data (should pass)
+# 2. Evaluate drifted data
 python -m driftwatch.cli evaluate \
-    --new food_delivery.csv
+    --new data/drifted/new_data_with_drift.csv
 
-# Expected: 0 drifts, severity: CLEAN
+# Expected: Multiple drifts detected
 ```
 
 ---
@@ -678,10 +1156,10 @@ python -m driftwatch.cli evaluate \
 
 ## Sample Data
 
-The project includes a sample dataset for testing:
+The project includes sample datasets for testing:
 
 **Reference Dataset:**
-- `food_delivery.csv` - 45,584 rows, 20 columns
+- `data/reference/reference_data.csv` - 1,000 rows, 20 columns
 - Food delivery order data including:
   - GPS coordinates (Restaurant and Delivery locations)
   - Delivery person ratings and age
@@ -705,7 +1183,7 @@ import pandas as pd
 import numpy as np
 
 # Load reference
-df = pd.read_csv('food_delivery.csv')
+df = pd.read_csv('data/reference/reference_data.csv')
 
 # Example: GPS precision drift (truncate coordinates)
 df['Restaurant_latitude'] = df['Restaurant_latitude'].round(2)
@@ -730,11 +1208,11 @@ df.to_csv('categorical_drift_test.csv', index=False)
 ```bash
 # Profile reference
 python -m driftwatch.cli profile \
-    --reference food_delivery.csv \
+    --reference data/reference/reference_data.csv \
     --config driftwatch_config.yaml
 
 # Evaluate against same data
-python -m driftwatch.cli evaluate --new food_delivery.csv
+python -m driftwatch.cli evaluate --new data/reference/reference_data.csv
 
 # Expected: 0 drifts, severity: CLEAN
 ```
@@ -780,7 +1258,7 @@ python -m driftwatch.cli evaluate --new data/statistical_drift.csv
 ```bash
 # Test with invalid config
 python -m driftwatch.cli profile \
-    --reference food_delivery.csv \
+    --reference data/reference/reference_data.csv \
     --config invalid_config.yaml
 
 # Expected: Validation errors showing:
@@ -804,12 +1282,12 @@ echo "==========================="
 # Step 1: Profile reference
 echo "Step 1: Profiling reference dataset..."
 python -m driftwatch.cli profile \
-    --reference food_delivery.csv \
+    --reference data/reference/reference_data.csv \
     --config driftwatch_config.yaml
 
 # Step 2: Evaluate against itself (should have no drift)
 echo -e "\nStep 2: Evaluating against same dataset..."
-python -m driftwatch.cli evaluate --new food_delivery.csv
+python -m driftwatch.cli evaluate --new data/reference/reference_data.csv
 
 echo -e "\n✓ Test complete!"
 echo "Expected: 0 drifts, severity: CLEAN"
@@ -830,7 +1308,7 @@ EOF
 
 # Test - should show validation errors
 python -m driftwatch.cli profile \
-    --reference food_delivery.csv \
+    --reference data/reference/reference_data.csv \
     --config test_invalid.yaml
 
 # Expected: Configuration validation error listing all issues
@@ -851,7 +1329,7 @@ This is a case study project. For production use, consider:
 ## Acknowledgments
 
 - **Great Expectations**: For the excellent data validation framework
-- **Statistical Methods**: PSI (banking industry standard), KS test
+- **Statistical Methods**: PSI for categorical drift, mean/std dev for numerical drift
 - **Case Study Source**: Backend Engineering Assessment
 
 ---

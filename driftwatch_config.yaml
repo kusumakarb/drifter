@@ -1,0 +1,52 @@
+# DriftWatch Configuration - Simplified
+
+# Schema check (automated from reference data)
+schema:
+  enabled: true
+
+# Column-level expectations (user-provided values)
+expectations:
+  # Statistical expectation for delivery time consistency
+  - column: Time_taken(min)
+    expectation: ExpectColumnStdevToBeBetween
+    values:
+      min_value: 8.5
+      max_value: 11.5
+
+  # Delivery ratings quality - detect distribution shift to low ratings
+  - column: Delivery_person_Ratings
+    expectation: ExpectColumnMeanToBeBetween
+    values:
+      min_value: 3.5
+      max_value: 5.0
+
+  # GPS precision expectation (representative check)
+  - column: Restaurant_latitude
+    expectation: ExpectColumnValuesToHaveDecimalPrecision
+    values:
+      precision: 6
+      mostly: 0.95
+
+  # Categorical value set expectation
+  - column: Type_of_order
+    expectation: ExpectColumnValuesToBeInSet
+    values:
+      value_set: ["Snack", "Meal", "Drinks", "Buffet"]
+
+  # Categorical distribution expectation
+  - column: Road_traffic_density
+    expectation: ExpectColumnCategoriesToMatchDistribution
+    values:
+      reference_distribution:
+        Jam: 0.314
+        Low: 0.344
+        Medium: 0.243
+        High: 0.098
+      psi_threshold: 0.25
+
+reporting:
+  format: json
+  output_dir: outputs
+
+logging:
+  level: INFO
