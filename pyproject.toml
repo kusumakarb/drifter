@@ -1,0 +1,80 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "driftwatch"
+version = "0.1.0"
+description = "Automated data drift and quality monitoring framework"
+requires-python = ">=3.12"
+dependencies = [
+    "great-expectations>=1.10.0",
+    "pandas>=2.3.3",
+    "pandas-stubs~=2.3.3",
+    "pyyaml>=6.0.3",
+    "scipy>=1.17.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.8.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.8.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# Enable comprehensive rule sets
+select = [
+    "E",      # pycodestyle errors
+    "F",      # pyflakes
+    "I",      # isort (import sorting)
+    "N",      # pep8-naming
+    "W",      # pycodestyle warnings
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear (common bugs)
+    "C4",     # flake8-comprehensions
+    "SIM",    # flake8-simplify
+    "RET",    # flake8-return
+    "ARG",    # flake8-unused-arguments
+    "PTH",    # flake8-use-pathlib
+    "PL",     # pylint
+    "RUF",    # ruff-specific rules
+]
+
+ignore = [
+    "PLR0913",  # Too many arguments to function call
+    "PLR2004",  # Magic value used in comparison
+    "RET504",   # Unnecessary variable assignment before return
+    "SIM108",   # Use ternary operator (can reduce readability)
+    "PLC0415",  # Import outside top-level (needed for lazy imports in GX expectations)
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Test files can have unused arguments, fixtures, etc.
+"test_*.py" = ["ARG", "PLR"]
+# CLI can have print statements and long functions
+"driftwatch/cli.py" = ["T201", "PLR0915", "ARG001"]
+# Expectation classes have specific patterns required by GX framework
+"driftwatch/expectations/*.py" = ["ARG002", "RUF012", "F821", "N805", "SIM102"]
+# Validation enricher has complex severity mapping
+"driftwatch/core/validation_result_enricher.py" = ["PLR0911"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["driftwatch"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
