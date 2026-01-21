@@ -9,31 +9,20 @@ A production-ready Python framework for detecting data drift using **Great Expec
 
 ## Table of Contents
 
-1. [Features](#features)
-2. [Installation](#installation)
-3. [Quick Start](#quick-start)
-4. [Architecture](#architecture)
-5. [Drift Detection Types](#drift-detection-types)
-6. [Statistical Methods & Justification](#statistical-methods--justification)
-7. [Configuration](#configuration)
-8. [Usage Examples](#usage-examples)
-9. [Design Decisions](#design-decisions)
-10. [Extending the Framework](#extending-the-framework)
-11. [Sample Data](#sample-data)
-12. [Test Cases](#test-cases)
-13. [Project Structure](#project-structure)
+1. [Installation](#installation)
+2. [Quick Start](#quick-start)
+3. [Architecture](#architecture)
+4. [Drift Detection Types](#drift-detection-types)
+5. [Statistical Methods & Justification](#statistical-methods--justification)
+6. [Configuration](#configuration)
+7. [Usage Examples](#usage-examples)
+8. [Design Decisions](#design-decisions)
+9. [Extending the Framework](#extending-the-framework)
+10. [Sample Data](#sample-data)
+11. [Test Cases](#test-cases)
+12. [Project Structure](#project-structure)
 
 ---
-
-## Features
-
-✅ **Built on Great Expectations 1.x**: Leverages GX's class-based API and validation engine
-✅ **Custom Expectations**: GPS precision and categorical distribution drift detection
-✅ **Persistent State Management**: GX file context stores suites and validation results
-✅ **Data Docs Integration**: Automatic HTML report generation with GX
-✅ **Validation History**: Complete audit trail stored by GX validation results store
-✅ **Production-Ready**: Type-safe, well-tested, comprehensive error handling
-✅ **Extensible**: Add custom expectations following GX 1.x patterns
 
 ---
 
@@ -1052,9 +1041,96 @@ pytest
 
 ### How to Add a New Drift Detection Rule
 
-DriftWatch is designed to be easily extensible. Follow these steps to add a new custom expectation:
+DriftWatch is designed to be easily extensible. You can add drift detection rules in two ways:
 
-#### Step 1: Create Custom Expectation Class
+#### Option 1: Use Existing Great Expectations
+
+Great Expectations provides 50+ built-in expectations. To use an existing GX expectation:
+
+**Step 1: Find the Expectation**
+
+Browse available expectations in the [GX Expectation Gallery](https://greatexpectations.io/expectations/) or check the [GX 1.x documentation](https://docs.greatexpectations.io/docs/core/introduction/gx_overview).
+
+Common examples:
+- `ExpectColumnValuesToBeBetween` - Values in a range
+- `ExpectColumnValuesToBeUnique` - Uniqueness check
+- `ExpectColumnValuesToNotBeNull` - Null check
+- `ExpectColumnDistinctValuesToBeInSet` - Category whitelist
+- `ExpectTableRowCountToBeBetween` - Row count bounds
+
+**Step 2: Register in Expectation Registry** (if not already registered)
+
+Check if the expectation is already in `driftwatch/core/expectation_registry.py`. If not, add it:
+
+```python
+from great_expectations.expectations import (
+    ExpectColumnValuesToBeBetween,
+    ExpectColumnValuesToBeUnique,
+    ExpectColumnDistinctValuesToBeInSet,
+)
+
+EXPECTATION_REGISTRY = {
+    # ... existing expectations ...
+
+    "ExpectColumnValuesToBeBetween": {
+        "class": ExpectColumnValuesToBeBetween,
+        "params": ["min_value", "max_value", "mostly"]
+    },
+    "ExpectColumnValuesToBeUnique": {
+        "class": ExpectColumnValuesToBeUnique,
+        "params": []
+    },
+    "ExpectColumnDistinctValuesToBeInSet": {
+        "class": ExpectColumnDistinctValuesToBeInSet,
+        "params": ["value_set"]
+    },
+}
+```
+
+> **Note:** DriftWatch includes many common GX expectations by default. Only add to the registry if you're using an expectation that isn't already there.
+
+**Step 3: Add to Configuration**
+
+Add the expectation to your `driftwatch_config.yaml`:
+
+```yaml
+expectations:
+  - column: age
+    expectation: ExpectColumnValuesToBeBetween
+    values:
+      min_value: 18
+      max_value: 100
+      mostly: 0.95  # 95% of values must be in range
+
+  - column: user_id
+    expectation: ExpectColumnValuesToBeUnique
+    values: {}
+
+  - column: status
+    expectation: ExpectColumnDistinctValuesToBeInSet
+    values:
+      value_set: ["active", "inactive", "pending"]
+```
+
+**Step 4: Test**
+
+```bash
+# Profile with new expectation
+python -m driftwatch.cli profile \
+    --reference your_data.csv \
+    --config driftwatch_config.yaml
+
+# Evaluate
+python -m driftwatch.cli evaluate --new new_data.csv
+```
+
+---
+
+#### Option 2: Create Custom Expectation
+
+For specialized drift detection logic not covered by GX built-ins, create a custom expectation.
+
+**Step 1: Create Custom Expectation Class**
 
 Create a new file in `driftwatch/expectations/` following GX 1.x patterns:
 
