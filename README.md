@@ -35,11 +35,11 @@ A production-ready Python framework for detecting data drift using **Great Expec
 
 ```bash
 # Create a virtual environment (use python3 on Linux/Mac)
-python3.12 -m venv .venv
+python3 -m venv venv
 
 # Activate the virtual environment
 # On Linux/Mac:
-source .venv/bin/activate
+source venv/bin/activate
 
 # On Windows (use 'python' instead of 'python3'):
 # python -m venv venv
@@ -95,7 +95,7 @@ DRIFTWATCH - EXPECTATION SUITE GENERATION (GX)
 
 ```bash
 python -m driftwatch.cli evaluate \
-    --new data/new_data_with_drift.csv
+    --new data/new/january_batch.csv
 ```
 
 **Output:**
