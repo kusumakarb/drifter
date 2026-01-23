@@ -158,6 +158,166 @@ ls -t gx/uncommitted/validations/ | head -1
 
 ---
 
+## Docker Usage
+
+DriftWatch can be easily run using Docker, eliminating the need for local Python 3.12 installation. The Docker image includes all dependencies and sample data for quick testing.
+
+### Quick Start with Docker
+
+#### 1. Build the Image
+
+```bash
+docker build -t driftwatch .
+```
+
+#### 2. Test with Built-In Sample Data
+
+```bash
+# Create output directory
+mkdir -p docker-outputs
+
+# Profile reference data
+docker run --rm \
+  -v $(pwd)/docker-outputs:/app/gx/uncommitted \
+  driftwatch profile \
+    --reference data/reference/reference_data.csv \
+    --config driftwatch_config.yaml
+
+# Evaluate drifted data
+docker run --rm \
+  -v $(pwd)/docker-outputs:/app/gx/uncommitted \
+  driftwatch evaluate \
+    --new data/drifted/new_data_with_drift.csv
+
+# View HTML reports
+# Linux:
+xdg-open docker-outputs/data_docs/local_site/index.html
+
+# macOS:
+open docker-outputs/data_docs/local_site/index.html
+
+# Windows:
+start docker-outputs\data_docs\local_site\index.html
+```
+
+#### 3. Use with Your Own Data
+
+```bash
+# Profile your reference dataset
+docker run --rm \
+  -v /path/to/your/data.csv:/app/user_data/data.csv:ro \
+  -v /path/to/your/config.yaml:/app/user_config.yaml:ro \
+  -v $(pwd)/docker-outputs:/app/gx/uncommitted \
+  driftwatch profile \
+    --reference /app/user_data/data.csv \
+    --config /app/user_config.yaml
+
+# Evaluate new data
+docker run --rm \
+  -v /path/to/your/new_data.csv:/app/user_data/new_data.csv:ro \
+  -v $(pwd)/docker-outputs:/app/gx/uncommitted \
+  driftwatch evaluate \
+    --new /app/user_data/new_data.csv
+```
+
+### Using Docker Compose
+
+Docker Compose simplifies command execution with pre-configured volume mounts.
+
+#### 1. Profile and Evaluate with Built-In Data
+
+```bash
+# Profile with sample data
+docker-compose run --rm driftwatch profile \
+  --reference data/reference/reference_data.csv \
+  --config driftwatch_config.yaml
+
+# Evaluate with sample data
+docker-compose run --rm driftwatch evaluate \
+  --new data/drifted/new_data_with_drift.csv
+```
+
+#### 2. Use with Your Own Data
+
+**Option A**: Edit `docker-compose.yml` volumes section:
+```yaml
+volumes:
+  - /your/path/data.csv:/app/user_data/data.csv:ro
+  - /your/path/config.yaml:/app/user_config.yaml:ro
+  - ./docker-outputs:/app/gx/uncommitted
+```
+
+**Option B**: Mount on-the-fly:
+```bash
+docker-compose run --rm \
+  -v /path/to/your/data.csv:/app/user_data/data.csv:ro \
+  driftwatch profile \
+    --reference /app/user_data/data.csv \
+    --config driftwatch_config.yaml
+```
+
+### Docker Output Locations
+
+After running drift detection, outputs are written to your host filesystem:
+
+- **Validation Results (JSON)**: `docker-outputs/validations/`
+- **HTML Reports**: `docker-outputs/data_docs/local_site/index.html`
+- **Custom Reports**: `docker-outputs/reports/`
+
+### Troubleshooting
+
+#### Permission Errors on Outputs
+
+If you encounter permission errors when writing outputs:
+
+```bash
+# Run container as your user
+docker run --rm --user $(id -u):$(id -g) \
+  -v $(pwd)/docker-outputs:/app/gx/uncommitted \
+  driftwatch evaluate --new data/drifted/new_data_with_drift.csv
+```
+
+Or fix permissions after:
+```bash
+sudo chown -R $(id -u):$(id -g) docker-outputs/
+```
+
+#### Interactive Debugging
+
+```bash
+# Start interactive shell
+docker run --rm -it --entrypoint /bin/bash driftwatch
+
+# Inside container, you can run commands directly:
+# python -m driftwatch list-expectations
+# python -m driftwatch profile --reference data/reference/reference_data.csv --config driftwatch_config.yaml
+```
+
+#### Check Container Logs
+
+```bash
+docker logs driftwatch
+```
+
+### Platform-Specific Notes
+
+**Linux**:
+- Native Docker support with optimal performance
+- All features work out of the box
+
+**macOS**:
+- Requires Docker Desktop
+- Volume mounts may be slower (use `:delegated` flag for better performance)
+- Use `open` command to view HTML reports
+
+**Windows**:
+- Requires Docker Desktop with WSL2 backend recommended
+- **Best performance**: Use WSL2 paths (`/mnt/c/Users/...`)
+- Alternative: Windows paths work but slower (`C:\Users\...`)
+- Use `start` command to view HTML reports
+
+---
+
 ## Architecture
 
 ### High-Level Design

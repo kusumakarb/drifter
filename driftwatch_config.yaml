@@ -7,7 +7,7 @@ schema:
 # Column-level expectations (user-provided values)
 expectations:
   # Statistical expectation for delivery time consistency
-  - column: Time_taken(min)
+  - column: Time_taken (min)
     expectation: ExpectColumnStdevToBeBetween
     values:
       min_value: 8.5
