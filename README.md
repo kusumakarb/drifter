@@ -24,8 +24,6 @@ A production-ready Python framework for detecting data drift using **Great Expec
 
 ---
 
----
-
 ## Installation
 
 ### Prerequisites
@@ -36,14 +34,15 @@ A production-ready Python framework for detecting data drift using **Great Expec
 ### Step 1: Create Virtual Environment
 
 ```bash
-# Create a virtual environment
-python -m venv venv
+# Create a virtual environment (use python3 on Linux/Mac)
+python3 -m venv venv
 
 # Activate the virtual environment
 # On Linux/Mac:
 source venv/bin/activate
 
-# On Windows:
+# On Windows (use 'python' instead of 'python3'):
+# python -m venv venv
 venv\Scripts\activate
 ```
 
