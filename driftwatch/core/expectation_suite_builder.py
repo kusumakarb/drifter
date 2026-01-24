@@ -103,7 +103,7 @@ class ExpectationSuiteBuilder:
         logger.info("Adding schema expectations...")
         for col in ref_df.columns:
             suite.add_expectation(
-                ExpectColumnToExist(column=col)
+                ExpectColumnToExist(column=col, meta={"severity": "CRITICAL"})
             )
         logger.info(f"✓ Added {len(ref_df.columns)} column existence expectations")
 
