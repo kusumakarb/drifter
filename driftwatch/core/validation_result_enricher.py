@@ -80,17 +80,13 @@ class ValidationResultEnricher:
 
         for result in validation_result.results:
             if not result.success:
-                # Check expectation config for severity
+                # Check expectation config for severity, default to MINOR
                 expectation_config = result.expectation_config
                 if hasattr(expectation_config, 'meta') and expectation_config.meta:
-                    severity = expectation_config.meta.get('severity', 'MAJOR')
-                    severities.append(severity.upper())
+                    severity = expectation_config.meta.get('severity', 'MINOR')
                 else:
-                    # Default severity based on expectation type
-                    severity = ValidationResultEnricher._default_severity_for_expectation(
-                        expectation_config.type
-                    )
-                    severities.append(severity)
+                    severity = 'MINOR'
+                severities.append(severity.upper())
 
         # No failures = CLEAN
         if not severities:
@@ -105,46 +101,6 @@ class ValidationResultEnricher:
             return 'MINOR'
         return 'CLEAN'
 
-    @staticmethod
-    def _default_severity_for_expectation(expectation_type: str) -> str:
-        """Get default severity for expectation type.
-
-        Args:
-            expectation_type: GX expectation type string
-
-        Returns:
-            Severity string: CRITICAL, MAJOR, or MINOR
-        """
-        # Schema changes are CRITICAL
-        if 'column_to_exist' in expectation_type:
-            return 'CRITICAL'
-
-        # Type changes are CRITICAL
-        if 'type' in expectation_type:
-            return 'CRITICAL'
-
-        # GPS precision is CRITICAL
-        if 'decimal_precision' in expectation_type:
-            return 'CRITICAL'
-
-        # Value range violations are CRITICAL
-        if 'to_be_between' in expectation_type and 'column_values' in expectation_type:
-            return 'CRITICAL'
-
-        # Statistical drifts are MAJOR
-        if any(keyword in expectation_type for keyword in ['mean', 'stdev', 'min', 'max']):
-            return 'MAJOR'
-
-        # Categorical drifts are MAJOR
-        if 'categories' in expectation_type or 'distribution' in expectation_type:
-            return 'MAJOR'
-
-        # Null values are MAJOR
-        if 'not_be_null' in expectation_type:
-            return 'MAJOR'
-
-        # Default to MINOR
-        return 'MINOR'
 
     @staticmethod
     def get_enriched_metadata(validation_result) -> dict[str, Any]:
