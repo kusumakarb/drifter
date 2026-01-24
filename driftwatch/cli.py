@@ -92,6 +92,7 @@ def evaluate_command(args):
         # Import custom expectations BEFORE loading suite
         # GX needs them registered to deserialize the suite
         import driftwatch.expectations  # noqa: F401
+        import great_expectations as gx
 
         # Initialize GX context
         logger.info("Loading GX context and expectation suite")
@@ -117,32 +118,62 @@ def evaluate_command(args):
         new_df = pd.read_csv(args.new)
         print(f"  Loaded {len(new_df):,} rows, {len(new_df.columns)} columns")
 
-        # Create validator and run validation
-        logger.info("Creating GX validator")
-        print("\n✓ Running GX validation...")
+        # Create validation using Checkpoint (proper GX 1.x approach)
+        logger.info("Setting up GX Checkpoint for validation")
+        print("\n✓ Running GX validation via Checkpoint...")
 
-        # Create batch request
+        # 1. Setup Datasource and Asset
         import uuid
         datasource_name = f"evaluation_{uuid.uuid4().hex[:8]}"
-
         datasource = context.data_sources.add_pandas(datasource_name)
         asset = datasource.add_dataframe_asset(name="new_data")
         batch_def = asset.add_batch_definition_whole_dataframe("batch")
-        batch_request = batch_def.build_batch_request({"dataframe": new_df})
 
-        # Get validator with existing suite
-        validator = context.get_validator(
-            batch_request=batch_request,
-            expectation_suite_name=suite_name
+        # 2. Create a Validation Definition
+        # This ties the Batch Definition to the Expectation Suite
+        validation_def_name = f"val_def_{uuid.uuid4().hex[:8]}"
+        validation_definition = context.validation_definitions.add(
+            gx.ValidationDefinition(
+                name=validation_def_name,
+                data=batch_def,
+                suite=suite
+            )
         )
 
-        # Run validation
-        logger.info("Running validation against expectation suite")
-        validation_result = validator.validate()
+        # 3. Create and configure Checkpoint with actions
+        # Validation results are stored automatically
+        # We only need UpdateDataDocsAction to rebuild HTML
+        checkpoint_name = f"checkpoint_{uuid.uuid4().hex[:8]}"
+        checkpoint = context.checkpoints.add(
+            gx.Checkpoint(
+                name=checkpoint_name,
+                validation_definitions=[validation_definition],
+                actions=[
+                    # Rebuild HTML Data Docs to include new validation results
+                    gx.checkpoint.actions.UpdateDataDocsAction(
+                        name="update_data_docs"
+                    ),
+                ],
+            )
+        )
 
-        # Generate run name for metadata
+        # 4. Run the Checkpoint with the dataframe
+        logger.info("Running checkpoint to validate data and persist results")
         run_name = f"drift_eval_{time.strftime('%Y%m%d_%H%M%S')}"
-        logger.info(f"Validation results automatically stored by GX with run_name: {run_name}")
+
+        from great_expectations.core import RunIdentifier
+        run_id = RunIdentifier(run_name=run_name)
+
+        checkpoint_result = checkpoint.run(
+            batch_parameters={"dataframe": new_df},
+            run_id=run_id
+        )
+
+        # Extract validation result from checkpoint result
+        # checkpoint_result.run_results is a dict with one entry
+        validation_result_id, validation_result = list(
+            checkpoint_result.run_results.items()
+        )[0]
 
         # Enrich with DriftWatch metadata
         duration = time.time() - start_time
@@ -152,6 +183,8 @@ def evaluate_command(args):
             config_file=None,  # Config not needed during evaluation
             duration_seconds=duration
         )
+
+        logger.info(f"Validation complete with run_name: {run_name}")
 
         # Extract metrics
         total_drifts = sum(1 for r in validation_result.results if not r.success)
@@ -193,11 +226,6 @@ def evaluate_command(args):
 
         # Duration tracking
         duration = time.time() - start_time
-
-        # Note: GX automatically stores validation results
-        logger.info("Validation results stored by GX")
-        print("\n✓ Validation results saved to: gx/uncommitted/validations/")
-        print("  (GX stores complete validation history with metadata)")
 
         logger.info(
             f"Evaluation complete: severity={overall_severity}, "
