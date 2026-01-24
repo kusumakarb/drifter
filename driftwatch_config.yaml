@@ -9,6 +9,7 @@ expectations:
   # Statistical expectation for delivery time consistency
   - column: Time_taken (min)
     expectation: ExpectColumnStdevToBeBetween
+    severity: MINOR  # Operational metric - not critical
     values:
       min_value: 8.5
       max_value: 11.5
@@ -16,6 +17,7 @@ expectations:
   # Delivery ratings quality - detect distribution shift to low ratings
   - column: Delivery_person_Ratings
     expectation: ExpectColumnMeanToBeBetween
+    severity: CRITICAL  # Customer satisfaction - business critical
     values:
       min_value: 3.5
       max_value: 5.0
@@ -23,6 +25,7 @@ expectations:
   # GPS precision expectation (representative check)
   - column: Restaurant_latitude
     expectation: ExpectColumnValuesToHaveDecimalPrecision
+    severity: CRITICAL  # GPS accuracy affects delivery routing
     values:
       precision: 6
       mostly: 0.95
@@ -30,12 +33,14 @@ expectations:
   # Categorical value set expectation
   - column: Type_of_order
     expectation: ExpectColumnValuesToBeInSet
+    severity: MAJOR  # Business logic depends on valid order types
     values:
       value_set: ["Snack", "Meal", "Drinks", "Buffet"]
 
   # Categorical distribution expectation
   - column: Road_traffic_density
     expectation: ExpectColumnCategoriesToMatchDistribution
+    severity: MAJOR  # Distribution shifts affect capacity planning
     values:
       reference_distribution:
         Jam: 0.314
@@ -47,6 +52,7 @@ expectations:
   # Column type change detection
   - column: Delivery_person_Age
     expectation: ExpectColumnValuesToBeOfType
+    severity: CRITICAL  # Type changes break downstream pipelines
     values:
       type_: float64
       mostly: 0.99

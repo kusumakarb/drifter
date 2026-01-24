@@ -132,6 +132,7 @@ class ExpectationSuiteBuilder:
             column = exp_def.get('column')
             expectation_name = exp_def.get('expectation')
             values = exp_def.get('values', {})
+            severity = exp_def.get('severity')
 
             # Resolve expectation class
             expectation_cls = self.registry.resolve(expectation_name)
@@ -141,6 +142,12 @@ class ExpectationSuiteBuilder:
                 column=column,
                 **values
             )
+
+            # Add severity to metadata if configured
+            if severity:
+                if not expectation_instance.meta:
+                    expectation_instance.meta = {}
+                expectation_instance.meta['severity'] = severity
 
             # Add to suite
             suite.add_expectation(expectation_instance)

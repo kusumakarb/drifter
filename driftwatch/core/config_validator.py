@@ -103,12 +103,22 @@ class ConfigValidator:
         column = exp_def.get("column")
         expectation_name = exp_def.get("expectation")
         values = exp_def.get("values", {})
+        severity = exp_def.get("severity")
 
         if not column:
             errors.append(f"Expectation #{idx}: Missing required field 'column'")
 
         if not expectation_name:
             errors.append(f"Expectation #{idx}: Missing required field 'expectation'")
+
+        # Validate severity if provided
+        if severity is not None:
+            valid_severities = ["CRITICAL", "MAJOR", "MINOR"]
+            if severity not in valid_severities:
+                errors.append(
+                    f"Expectation #{idx}: Invalid severity '{severity}'. "
+                    f"Must be one of: {', '.join(valid_severities)}"
+                )
 
         # If required fields missing, skip further validation
         if not column or not expectation_name:
