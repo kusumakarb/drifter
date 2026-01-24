@@ -169,6 +169,7 @@ def evaluate_command(args):
             run_id=run_id
         )
 
+        context.open_data_docs()
         # Extract validation result from checkpoint result
         # checkpoint_result.run_results is a dict with one entry
         validation_result_id, validation_result = list(
